@@ -8,7 +8,7 @@ This project demonstrates how to create an OPC UA client using the OPC Foundatio
 - Subscribe to, poll, or manually read the values of specific nodes
 - Display the values of the nodes in a Blazor Server application
 
-![Screen Demo](wwwroot/images/screen-demo.gif)
+![Screen Demo](BlazorExample/wwwroot/images/screen-demo.gif)
 
 ## Setup and Running the Project
 

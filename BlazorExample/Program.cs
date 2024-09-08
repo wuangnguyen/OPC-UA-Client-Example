@@ -1,7 +1,6 @@
-using Opc.Ua;
-using OPC_UA_Client.Components;
-using OPC_UA_Client.Models;
-using OPC_UA_Client.Services;
+using BlazorExample.Components;
+using OpcUaClient.Models;
+using OpcUaClient.Services;
 using Serilog;
 
 internal class Program

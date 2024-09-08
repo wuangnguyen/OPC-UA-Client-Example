@@ -1,6 +1,6 @@
 using Opc.Ua;
 
-namespace OPC_UA_Client.Models
+namespace OpcUaClient.Models
 {
     public class OpcUaSettings
     {

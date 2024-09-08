@@ -1,7 +1,11 @@
-﻿using Opc.Ua;
+﻿using Microsoft.Extensions.Logging;
+using Opc.Ua;
 using Opc.Ua.Client;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 
-namespace OPC_UA_Client.Services;
+namespace OpcUaClient.Services;
 
 /// <summary>
 /// Service for polling values of Nodes at regular intervals.
@@ -26,8 +30,8 @@ public class OpcUaPollingService : IAsyncDisposable
     /// <param name="loggerFactory">The logger factory.</param>
     public OpcUaPollingService(OpcUaSessionProvider sessionProvider, ILoggerFactory loggerFactory)
     {
-        this.logger = loggerFactory.CreateLogger<OpcUaPollingService>();
-        lazySession = new Lazy<Task<Session>>(sessionProvider.CreateSessionAsync);
+        logger = loggerFactory.CreateLogger<OpcUaPollingService>();
+        lazySession = new Lazy<Task<Session>>(sessionProvider.CreateSessionAsync());
     }
 
     /// <summary>
@@ -48,7 +52,7 @@ public class OpcUaPollingService : IAsyncDisposable
     public async Task StartPollingAsync(NodeId[] nodeIds, int interval = 1000)
     {
         session = await lazySession.Value;
-        
+
         this.nodeIds = nodeIds;
 
         pollingTimer = new Timer(async _ => await ReadValuesAsync(), null, 0, interval);

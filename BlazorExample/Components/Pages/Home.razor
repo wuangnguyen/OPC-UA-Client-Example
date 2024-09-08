@@ -1,12 +1,11 @@
 ﻿@page "/"
 @using System;
 @using System.Threading.Tasks;
-@using Microsoft.Extensions.Configuration;
-@using OPC_UA_Client.Services;
 @using Opc.Ua;
 @using Opc.Ua.Client;
 @using Opc.Ua.Configuration;
-@inject IConfiguration Configuration
+@using OpcUaClient.Services;
+
 @inject OpcUaPollingService PollingService
 @inject OpcUaSubscriptionService SubscriptionService
 @inject ILoggerFactory LoggerFactory

@@ -1,7 +1,12 @@
+using Microsoft.Extensions.Logging;
 using Opc.Ua;
 using Opc.Ua.Client;
+using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
-namespace OPC_UA_Client.Services;
+namespace OpcUaClient.Services;
 
 /// <summary>
 /// Service for subscribing to monitored items and handling notifications.
@@ -24,7 +29,7 @@ public class OpcUaSubscriptionService : IAsyncDisposable
     /// <param name="loggerFactory">The logger factory.</param>
     public OpcUaSubscriptionService(OpcUaSessionProvider sessionProvider, ILoggerFactory loggerFactory)
     {
-        this.logger = loggerFactory.CreateLogger<OpcUaSubscriptionService>();
+        logger = loggerFactory.CreateLogger<OpcUaSubscriptionService>();
         lazySession = new Lazy<Task<Session>>(sessionProvider.CreateSessionAsync);
     }
 

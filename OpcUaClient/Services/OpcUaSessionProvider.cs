@@ -2,9 +2,13 @@
 using Opc.Ua.Client;
 using Opc.Ua.Configuration;
 using Opc.Ua;
-using OPC_UA_Client.Models;
+using OpcUaClient.Models;
+using System;
+using System.Threading.Tasks;
+using System.IO;
+using System.Threading;
 
-namespace OPC_UA_Client.Services;
+namespace OpcUaClient.Services;
 
 /// <summary>
 /// Provides an instance of communication session.
@@ -32,7 +36,7 @@ public class OpcUaSessionProvider : IAsyncDisposable
     public async Task<Session> CreateSessionAsync()
     {
         await semaphore.WaitAsync();
-        
+
         try
         {
             if (session != null)
