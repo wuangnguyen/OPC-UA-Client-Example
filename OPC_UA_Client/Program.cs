@@ -1,5 +1,6 @@
 using Opc.Ua;
 using OPC_UA_Client.Components;
+using OPC_UA_Client.Models;
 using OPC_UA_Client.Services;
 using Serilog;
 
@@ -12,8 +13,9 @@ internal class Program
         // Configure Serilog logger.
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Information()
+            .Enrich.FromLogContext()
             .WriteTo.Console()
-            .WriteTo.File("logs/log.txt", rollingInterval: RollingInterval.Day)
+            .WriteTo.File("Logs/log.txt", rollingInterval: RollingInterval.Day)
             .CreateLogger();
 
         // Add Serilog to the logging pipeline
@@ -24,12 +26,9 @@ internal class Program
         builder.Services.AddRazorComponents()
             .AddInteractiveServerComponents();
 
-        builder.Services.AddSingleton(provider =>
-        {
-            var configuration = provider.GetRequiredService<IConfiguration>();
-            var userTokenType = Enum.Parse<UserTokenType>(configuration["OpcUaServerSettings:UserTokenType"]!);
-            return new OpcUaSessionProvider(configuration, userTokenType);
-        });
+        builder.Services.Configure<OpcUaSettings>(builder.Configuration.GetSection("OpcUaSettings"));
+
+        builder.Services.AddScoped<OpcUaSessionProvider>();
 
         builder.Services.AddTransient<OpcUaPollingService>();
         builder.Services.AddTransient<OpcUaSubscriptionService>();

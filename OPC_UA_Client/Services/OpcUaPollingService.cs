@@ -4,7 +4,7 @@ using Opc.Ua.Client;
 namespace OPC_UA_Client.Services;
 
 /// <summary>
-/// Service for polling OPC UA nodes at regular intervals.
+/// Service for polling values of Nodes at regular intervals.
 /// </summary>
 public class OpcUaPollingService : IAsyncDisposable
 {
@@ -23,10 +23,10 @@ public class OpcUaPollingService : IAsyncDisposable
     /// Initializes a new instance of the <see cref="OpcUaPollingService"/> class.
     /// </summary>
     /// <param name="sessionProvider">The session provider.</param>
-    /// <param name="logger">The logger.</param>
-    public OpcUaPollingService(OpcUaSessionProvider sessionProvider, ILogger<OpcUaPollingService> logger)
+    /// <param name="loggerFactory">The logger factory.</param>
+    public OpcUaPollingService(OpcUaSessionProvider sessionProvider, ILoggerFactory loggerFactory)
     {
-        this.logger = logger;
+        this.logger = loggerFactory.CreateLogger<OpcUaPollingService>();
         lazySession = new Lazy<Task<Session>>(sessionProvider.CreateSessionAsync);
     }
 
@@ -81,6 +81,14 @@ public class OpcUaPollingService : IAsyncDisposable
         {
             logger.LogError($"Error fetching data for NodeIds: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Gets the session for reading values on demand.
+    /// </summary>
+    public async Task<Session> GetSessionAsync()
+    {
+        return await lazySession.Value;
     }
 
     /// <summary>

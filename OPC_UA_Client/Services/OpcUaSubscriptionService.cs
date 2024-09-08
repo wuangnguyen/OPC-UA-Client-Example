@@ -4,7 +4,7 @@ using Opc.Ua.Client;
 namespace OPC_UA_Client.Services;
 
 /// <summary>
-/// Service for managing OPC UA subscriptions.
+/// Service for subscribing to monitored items and handling notifications.
 /// </summary>
 public class OpcUaSubscriptionService : IAsyncDisposable
 {
@@ -21,10 +21,10 @@ public class OpcUaSubscriptionService : IAsyncDisposable
     /// Initializes a new instance of the <see cref="OpcUaSubscriptionService"/> class.
     /// </summary>
     /// <param name="sessionProvider">The session provider.</param>
-    /// <param name="logger">The logger.</param>
-    public OpcUaSubscriptionService(OpcUaSessionProvider sessionProvider, ILogger<OpcUaSubscriptionService> logger)
+    /// <param name="loggerFactory">The logger factory.</param>
+    public OpcUaSubscriptionService(OpcUaSessionProvider sessionProvider, ILoggerFactory loggerFactory)
     {
-        this.logger = logger;
+        this.logger = loggerFactory.CreateLogger<OpcUaSubscriptionService>();
         lazySession = new Lazy<Task<Session>>(sessionProvider.CreateSessionAsync);
     }
 

@@ -1,35 +1,34 @@
-﻿using Opc.Ua.Client;
+﻿using Microsoft.Extensions.Options;
+using Opc.Ua.Client;
 using Opc.Ua.Configuration;
 using Opc.Ua;
+using OPC_UA_Client.Models;
 
 namespace OPC_UA_Client.Services;
 
 /// <summary>
-/// Provides an instance of OPC UA session.
+/// Provides an instance of communication session.
 /// </summary>
 public class OpcUaSessionProvider : IAsyncDisposable
 {
-    private readonly IConfiguration configuration;
-    private readonly UserTokenType userTokenType;
+    private readonly OpcUaSettings opcUaSettings;
     private Session? session;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OpcUaSessionProvider"/> class.
     /// </summary>
-    /// <param name="configuration">The configuration.</param>
-    /// <param name="userTokenType">The user token type.</param>
-    public OpcUaSessionProvider(IConfiguration configuration, UserTokenType userTokenType = UserTokenType.Anonymous)
+    /// <param name="options">The options.</param>
+    public OpcUaSessionProvider(IOptions<OpcUaSettings> options)
     {
-        this.configuration = configuration;
-        this.userTokenType = userTokenType;
+        opcUaSettings = options.Value;
     }
 
     private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
 
     /// <summary>
-    /// Create an OPC UA session asynchronously.
+    /// Create an communication session asynchronously.
     /// </summary>
-    /// <returns>The OPC UA session.</returns>
+    /// <returns>The communication session.</returns>
     public async Task<Session> CreateSessionAsync()
     {
         await semaphore.WaitAsync();
@@ -50,7 +49,7 @@ public class OpcUaSessionProvider : IAsyncDisposable
     }
 
     /// <summary>
-    /// Creates a new OPC UA session asynchronously.
+    /// Creates a new communication session asynchronously.
     /// </summary>
     /// <returns>The created session.</returns>
     private async Task<Session> CreateSessionInternalAsync()
@@ -58,15 +57,15 @@ public class OpcUaSessionProvider : IAsyncDisposable
         ApplicationInstance applicationInstance = await LoadApplicationConfigurationAsync();
         ConfiguredEndpoint configuredEndpoint = GetConfiguredEndpoint(applicationInstance);
 
-        UserIdentity userIdentity = userTokenType switch
+        UserIdentity userIdentity = opcUaSettings.UserTokenType switch
         {
             UserTokenType.Anonymous => new UserIdentity(new AnonymousIdentityToken()),
-            UserTokenType.UserName => new UserIdentity(configuration["OpcUaServerSettings:UserIdentity:Username"], configuration["OpcUaServerSettings:UserIdentity:Password"]),
+            UserTokenType.UserName => new UserIdentity(opcUaSettings.UserIdentity.Username, opcUaSettings.UserIdentity.Password),
             UserTokenType.Certificate => new UserIdentity(await applicationInstance.ApplicationConfiguration.SecurityConfiguration.ApplicationCertificate.Find()),
-            _ => throw new ArgumentException("Invalid user token type", nameof(userTokenType)),
+            _ => throw new ArgumentException($"{opcUaSettings.UserTokenType.ToString()} is invalid user token type")
         };
 
-        session = await Session.Create(applicationInstance.ApplicationConfiguration, configuredEndpoint, false, "Blazor OPC UA Client", 60000, userIdentity, null);
+        session = await Session.Create(applicationInstance.ApplicationConfiguration, configuredEndpoint, false, opcUaSettings.ApplicationName, 60000, userIdentity, null);
 
         return session;
     }
@@ -78,7 +77,7 @@ public class OpcUaSessionProvider : IAsyncDisposable
     /// <returns>The configured endpoint.</returns>
     private ConfiguredEndpoint GetConfiguredEndpoint(ApplicationInstance applicationInstance)
     {
-        string endpointUrl = configuration["OpcUaServerSettings:OpcUaEndpoint"]!;
+        string endpointUrl = opcUaSettings.ServerEndpoint;
 
         var endpoint = CoreClientUtils.SelectEndpoint(endpointUrl, useSecurity: false);
         var configuredEndpoint = new ConfiguredEndpoint(null, endpoint, EndpointConfiguration.Create(applicationInstance.ApplicationConfiguration));
@@ -90,9 +89,9 @@ public class OpcUaSessionProvider : IAsyncDisposable
     /// Loads the application configuration asynchronously.
     /// </summary>
     /// <returns>The application instance.</returns>
-    private static async Task<ApplicationInstance> LoadApplicationConfigurationAsync()
+    private async Task<ApplicationInstance> LoadApplicationConfigurationAsync()
     {
-        string configFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ClientConfig.xml");
+        string configFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, opcUaSettings.ApplicationConfigFilePath);
 
         var applicationInstance = new ApplicationInstance();
         await applicationInstance.LoadApplicationConfiguration(configFilePath, false);
