@@ -4,12 +4,20 @@ using Opc.Ua;
 
 namespace OPC_UA_Client.Services;
 
+/// <summary>
+/// Provides an instance of OPC UA session.
+/// </summary>
 public class OpcUaSessionProvider : IAsyncDisposable
 {
     private readonly IConfiguration configuration;
     private readonly UserTokenType userTokenType;
     private Session? session;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OpcUaSessionProvider"/> class.
+    /// </summary>
+    /// <param name="configuration">The configuration.</param>
+    /// <param name="userTokenType">The user token type.</param>
     public OpcUaSessionProvider(IConfiguration configuration, UserTokenType userTokenType = UserTokenType.Anonymous)
     {
         this.configuration = configuration;
@@ -18,7 +26,11 @@ public class OpcUaSessionProvider : IAsyncDisposable
 
     private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
 
-    public async Task<Session> GetSessionAsync()
+    /// <summary>
+    /// Create an OPC UA session asynchronously.
+    /// </summary>
+    /// <returns>The OPC UA session.</returns>
+    public async Task<Session> CreateSessionAsync()
     {
         await semaphore.WaitAsync();
         
@@ -29,7 +41,7 @@ public class OpcUaSessionProvider : IAsyncDisposable
                 return session;
             }
 
-            return await CreateSessionAsync();
+            return await CreateSessionInternalAsync();
         }
         finally
         {
@@ -37,7 +49,11 @@ public class OpcUaSessionProvider : IAsyncDisposable
         }
     }
 
-    private async Task<Session> CreateSessionAsync()
+    /// <summary>
+    /// Creates a new OPC UA session asynchronously.
+    /// </summary>
+    /// <returns>The created session.</returns>
+    private async Task<Session> CreateSessionInternalAsync()
     {
         ApplicationInstance applicationInstance = await LoadApplicationConfigurationAsync();
         ConfiguredEndpoint configuredEndpoint = GetConfiguredEndpoint(applicationInstance);
@@ -55,6 +71,11 @@ public class OpcUaSessionProvider : IAsyncDisposable
         return session;
     }
 
+    /// <summary>
+    /// Gets the configured endpoint.
+    /// </summary>
+    /// <param name="applicationInstance">The application instance.</param>
+    /// <returns>The configured endpoint.</returns>
     private ConfiguredEndpoint GetConfiguredEndpoint(ApplicationInstance applicationInstance)
     {
         string endpointUrl = configuration["OpcUaServerSettings:OpcUaEndpoint"]!;
@@ -65,6 +86,10 @@ public class OpcUaSessionProvider : IAsyncDisposable
         return configuredEndpoint;
     }
 
+    /// <summary>
+    /// Loads the application configuration asynchronously.
+    /// </summary>
+    /// <returns>The application instance.</returns>
     private static async Task<ApplicationInstance> LoadApplicationConfigurationAsync()
     {
         string configFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ClientConfig.xml");
@@ -82,6 +107,9 @@ public class OpcUaSessionProvider : IAsyncDisposable
         return applicationInstance;
     }
 
+    /// <summary>
+    /// Disposes the service asynchronously.
+    /// </summary>
     public async ValueTask DisposeAsync()
     {
         await session?.CloseAsync()!;

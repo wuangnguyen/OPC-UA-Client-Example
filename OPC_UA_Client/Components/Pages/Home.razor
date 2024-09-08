@@ -98,13 +98,16 @@ Welcome to your new app.
 
     private void HandleReceivedPollingData(NodeId nodeId, DataValue value)
     {
-        if (nodeId.Identifier.ToString() == "Channel1.Device1.Tag1")
+        Console.WriteLine($"Data from Polling: {nodeId.Identifier.ToString()} - {value.Value?.ToString()}");
+        
+        switch (nodeId.Identifier.ToString())
         {
-            pollingTag1Data = value.Value?.ToString();
-        }
-        else if (nodeId.Identifier.ToString() == "Channel1.Device2.Tag3")
-        {
-            pollingTag3Data = value.Value?.ToString();
+            case "Channel1.Device1.Tag1":
+                pollingTag1Data = value.Value?.ToString();
+                break;
+            case "Channel1.Device2.Tag3":
+                pollingTag3Data = value.Value?.ToString();
+                break;
         }
         
         InvokeAsync(StateHasChanged);

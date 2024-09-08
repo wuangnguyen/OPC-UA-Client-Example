@@ -1,0 +1,134 @@
+# Project Documentation
+
+## Summary
+This project provides an example of a Blazor Server application as an OPC UA client using the OPC Foundation [.NET Standard Opc.Ua.Client library](https://www.nuget.org/packages/OPCFoundation.NetStandard.Opc.Ua.Client)
+
+## Main Features
+- Connection to an OPC UA server
+- Subscription or polling of specific nodes
+- Display of the value of the node in a Blazor Server application
+
+## Setup and Running the Project
+
+### Step 1: Update `ClientConfig.xml`
+1. Update the `<ApplicationName>`, `<ApplicationUri>`, and `<ProductUri>` fields in the `ClientConfig.xml` file as needed.
+2. Update appsettings.json with the correct endpoint URL and identity information to connect to your OPC UA server.
+
+### Step 2: Build and Run the Project
+1. Open the solution in your preferred .NET IDE (e.g., Visual Studio).
+2. Build the project to ensure all dependencies are resolved.
+3. Run the project.
+
+### Step 3: Verify the Connection
+1. Once the client is running, it will attempt to connect to the OPC UA server. If the connection is successful, you should see the subscription data change notifications in the console output. otherwise, refer to the Troubleshooting section.
+2. Check the console output for any error messages or connection issues.
+
+## Example of usage
+### Register Services in Program.cs:
+
+```csharp
+
+builder.Services.AddSingleton(provider =>
+{
+    var configuration = provider.GetRequiredService<IConfiguration>();
+    var userTokenType = Enum.Parse<UserTokenType>(configuration["OpcUaServerSettings:UserTokenType"]!);
+    return new OpcUaSessionProvider(configuration, userTokenType);
+});
+
+builder.Services.AddTransient<OpcUaPollingService>();
+builder.Services.AddTransient<OpcUaSubscriptionService>();
+
+```
+
+### Inject Services in Home.razor:
+
+```csharp
+...
+@inject OpcUaPollingService PollingService
+// @inject OpcUaPollingService PollingService1 // you can inject many instances as you want
+@inject OpcUaSubscriptionService SubscriptionService
+...
+
+```
+
+### Setup and use Polling and Subscription services in Home.razor
+
+```csharp
+@code {
+    private string? pollingTag1Data = "...";
+    private string? pollingTag3Data = "...";
+    private string? subscriptionTag1Data = "...";
+    private string? subscriptionTag3Data = "...";
+
+    protected async override Task OnInitializedAsync()
+    {
+        // Setup Polling
+        PollingService.OnDataChanged += HandleReceivedPollingData;
+        
+        NodeId[] nodeIds = new[] { new NodeId("Channel1.Device1.Tag1", 2), new NodeId("Channel1.Device2.Tag3", 2) };
+        
+        await PollingService.StartPollingAsync(nodeIds, 2000); // 2000 is the polling interval in milliseconds, it's optional and the default value is 1000
+
+        // Setup Subscription
+        SubscriptionService.OnSubscriptionDataChanged += HandleSubscriptionDataChanged;
+        
+        var monitoredItems = new[]
+        {
+            new MonitoredItem { DisplayName = "Channel1.Device1.Tag1", StartNodeId = new NodeId("Channel1.Device1.Tag1", 2) },
+            new MonitoredItem { DisplayName = "Channel1.Device2.Tag3", StartNodeId = new NodeId("Channel1.Device2.Tag3", 2) }
+        };
+        
+        await SubscriptionService.AddMonitoredItemAsync(monitoredItems);
+    }
+
+    private void HandleReceivedPollingData(NodeId nodeId, DataValue value)
+    {
+        Console.WriteLine($"Data from Polling: {nodeId.Identifier.ToString()} - {value.Value?.ToString()}");
+        
+        switch (nodeId.Identifier.ToString())
+        {
+            case "Channel1.Device1.Tag1":
+                pollingTag1Data = value.Value?.ToString();
+                break;
+            case "Channel1.Device2.Tag3":
+                pollingTag3Data = value.Value?.ToString();
+                break;
+        }
+        
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleSubscriptionDataChanged(string displayName, DataValue dataValue)
+    {
+        switch (displayName)
+        {
+            case "Channel1.Device1.Tag1":
+                subscriptionTag1Data = dataValue.Value?.ToString();
+                break;
+            case "Channel1.Device2.Tag3":
+                subscriptionTag3Data = dataValue.Value?.ToString();
+                break;
+        }
+        
+        InvokeAsync(StateHasChanged);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        PollingService.OnDataChanged -= HandleReceivedPollingData;
+        await PollingService.DisposeAsync();
+        SubscriptionService.OnSubscriptionDataChanged -= HandleSubscriptionDataChanged;
+        await SubscriptionService.DisposeAsync();
+    }
+}
+```
+
+## Troubleshooting
+- Ensure that the OPC UA server is running and accessible.
+- Verify that the self-signed certificate is correctly added to the trust list.
+    1. Run the OPC UA Configuration Manager.
+    2. Navigate to the "Trust List" section.
+    3. Manually add the self-signed certificate generated by your client to the trust list.
+
+- Verify that the endpoint URL is correct and that the OPC UA server is reachable.
+- Check the console output for any error messages or connection issues.
