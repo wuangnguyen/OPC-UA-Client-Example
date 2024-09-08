@@ -1,0 +1,134 @@
+﻿@page "/"
+@using System;
+@using System.Threading.Tasks;
+@using Microsoft.Extensions.Configuration;
+@using OPC_UA_Client.Services;
+@using Opc.Ua;
+@using Opc.Ua.Client;
+@using Opc.Ua.Configuration;
+@inject IConfiguration Configuration
+@inject OpcUaPollingService PollingService
+@inject OpcUaSubscriptionService SubscriptionService
+@inject ILoggerFactory LoggerFactory
+@implements IAsyncDisposable
+@rendermode InteractiveServer
+
+<PageTitle>Home</PageTitle>
+
+<h1>Hello, world!</h1>
+
+Welcome to your new app.
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
+
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h2>Polling data:</h2>
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Tag1</h5>
+                    <div class="display-4 text-center fw-bold">@pollingTag1Data</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <h2>Subscription Data:</h2>
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Tag1</h5>
+                    <div class="display-4 text-center fw-bold">@subscriptionTag1Data</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Tag3</h5>
+                    <div class="display-4 text-center fw-bold">@pollingTag3Data</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Tag3</h5>
+                    <div class="display-4 text-center fw-bold">@subscriptionTag3Data</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string? pollingTag1Data = "...";
+    private string? pollingTag3Data = "...";
+    private string? subscriptionTag1Data = "...";
+    private string? subscriptionTag3Data = "...";
+
+    protected async override Task OnInitializedAsync()
+    {
+        // Setup Polling
+        PollingService.OnDataChanged += HandleReceivedPollingData;
+        await PollingService.StartPollingAsync(new NodeId("Channel1.Device1.Tag1", 2));
+        await PollingService.StartPollingAsync(new NodeId("Channel1.Device2.Tag3", 2), 5000);
+
+        // Setup Subscription
+        SubscriptionService.OnSubscriptionDataChanged += HandleSubscriptionDataChanged;
+
+        var monitoredItem1 = new MonitoredItem
+        {
+            DisplayName = "Channel1.Device1.Tag1",
+            StartNodeId = new NodeId("Channel1.Device1.Tag1", 2)
+        };
+        await SubscriptionService.AddSubscriptionAsync(monitoredItem1);
+
+        var monitoredItem2 = new MonitoredItem
+        {
+            DisplayName = "Channel1.Device2.Tag3",
+            StartNodeId = new NodeId("Channel1.Device2.Tag3", 2)
+        };
+        await SubscriptionService.AddSubscriptionAsync(monitoredItem2);
+    }
+
+    private void HandleReceivedPollingData(NodeId nodeId, DataValue value)
+    {
+        if (nodeId.Identifier.ToString() == "Channel1.Device1.Tag1")
+        {
+            pollingTag1Data = value.Value?.ToString();
+        }
+        else if (nodeId.Identifier.ToString() == "Channel1.Device2.Tag3")
+        {
+            pollingTag3Data = value.Value?.ToString();
+        }
+        
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleSubscriptionDataChanged(string displayName, DataValue dataValue)
+    {
+        Console.WriteLine($"Data from {displayName}: {dataValue.Value?.ToString()}");
+        
+        switch (displayName)
+        {
+            case "Channel1.Device1.Tag1":
+                subscriptionTag1Data = dataValue.Value?.ToString();
+                break;
+            case "Channel1.Device2.Tag3":
+                subscriptionTag3Data = dataValue.Value?.ToString();
+                break;
+        }
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        PollingService.OnDataChanged -= HandleReceivedPollingData;
+        await PollingService.DisposeAsync();
+
+        SubscriptionService.OnSubscriptionDataChanged -= HandleSubscriptionDataChanged;
+        await SubscriptionService.DisposeAsync();
+    }
+}
