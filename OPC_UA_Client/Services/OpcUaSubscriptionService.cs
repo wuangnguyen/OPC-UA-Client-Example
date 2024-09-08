@@ -2,11 +2,12 @@ using Opc.Ua;
 using Opc.Ua.Client;
 
 namespace OPC_UA_Client.Services;
+
 public class OpcUaSubscriptionService : IAsyncDisposable
 {
     private readonly Lazy<Task<Session>> lazySession;
     private readonly ILogger<OpcUaSubscriptionService> logger;
-    private readonly List<Subscription> subscriptions = new();
+    private Subscription? subscription;
 
     public event Action<string, DataValue> OnSubscriptionDataChanged;
 
@@ -16,22 +17,45 @@ public class OpcUaSubscriptionService : IAsyncDisposable
         lazySession = new Lazy<Task<Session>>(sessionProvider.GetSessionAsync);
     }
 
-    public async Task AddSubscriptionAsync(MonitoredItem monitoredItem)
+    public async Task AddMonitoredItemAsync(MonitoredItem monitoredItem)
     {
-        try
-        {
-            var session = await lazySession.Value;
+        await EnsureSubscriptionAsync();
 
-            var subscription = new Subscription(session.DefaultSubscription);
+        AddMonitoredItemInternal(monitoredItem);
+
+        await subscription!.ApplyChangesAsync();
+    }
+
+    public async Task AddMonitoredItemAsync(MonitoredItem[] monitoredItems)
+    {
+        await EnsureSubscriptionAsync();
+
+        foreach (var monitoredItem in monitoredItems)
+        {
+            AddMonitoredItemInternal(monitoredItem);
+        }
+
+        await subscription!.ApplyChangesAsync();
+    }
+
+    private async Task EnsureSubscriptionAsync()
+    {
+        var session = await lazySession.Value;
+
+        if (subscription == null)
+        {
+            subscription = new Subscription(session.DefaultSubscription);
+            session.AddSubscription(subscription);
+            await subscription.CreateAsync();
+        }
+    }
+
+    private void AddMonitoredItemInternal(MonitoredItem monitoredItem)
+    {
+        if (!subscription!.MonitoredItems.Contains(monitoredItem))
+        {
             monitoredItem.Notification += OnNotification;
             subscription.AddItem(monitoredItem);
-            session.AddSubscription(subscription);
-            subscription.Create();
-            subscriptions.Add(subscription);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error setting up subscription");
         }
     }
 
@@ -45,13 +69,17 @@ public class OpcUaSubscriptionService : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        foreach (var subscription in subscriptions)
+        if (subscription != null)
         {
-            subscription.Delete(true);
+            foreach (var monitoredItem in subscription.MonitoredItems)
+            {
+                monitoredItem.Notification -= OnNotification;
+            }
+
+            await subscription.DeleteItemsAsync(CancellationToken.None);
+            await subscription.DeleteAsync(true);
         }
 
-        subscriptions.Clear();
-        
-        await ValueTask.CompletedTask;
+        subscription = null;
     }
 }

@@ -82,11 +82,9 @@ public class OpcUaSessionProvider : IAsyncDisposable
         return applicationInstance;
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
-        session?.Close();
+        await session?.CloseAsync()!;
         session?.Dispose();
-
-        return ValueTask.CompletedTask;
     }
 }

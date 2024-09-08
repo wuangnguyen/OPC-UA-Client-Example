@@ -71,25 +71,29 @@ Welcome to your new app.
     {
         // Setup Polling
         PollingService.OnDataChanged += HandleReceivedPollingData;
-        await PollingService.StartPollingAsync(new NodeId("Channel1.Device1.Tag1", 2));
-        await PollingService.StartPollingAsync(new NodeId("Channel1.Device2.Tag3", 2), 5000);
+
+        NodeId[] nodeIds = new[] { new NodeId("Channel1.Device1.Tag1", 2), new NodeId("Channel1.Device2.Tag3", 2) };
+
+        await PollingService.StartPollingAsync(nodeIds, 1000);
 
         // Setup Subscription
         SubscriptionService.OnSubscriptionDataChanged += HandleSubscriptionDataChanged;
 
-        var monitoredItem1 = new MonitoredItem
+        var monitoredItems = new[]
         {
-            DisplayName = "Channel1.Device1.Tag1",
-            StartNodeId = new NodeId("Channel1.Device1.Tag1", 2)
+            new MonitoredItem
+            {
+                DisplayName = "Channel1.Device1.Tag1",
+                StartNodeId = new NodeId("Channel1.Device1.Tag1", 2)
+            },
+            new MonitoredItem
+            {
+                DisplayName = "Channel1.Device2.Tag3",
+                StartNodeId = new NodeId("Channel1.Device2.Tag3", 2)
+            }
         };
-        await SubscriptionService.AddSubscriptionAsync(monitoredItem1);
 
-        var monitoredItem2 = new MonitoredItem
-        {
-            DisplayName = "Channel1.Device2.Tag3",
-            StartNodeId = new NodeId("Channel1.Device2.Tag3", 2)
-        };
-        await SubscriptionService.AddSubscriptionAsync(monitoredItem2);
+        await SubscriptionService.AddMonitoredItemAsync(monitoredItems);
     }
 
     private void HandleReceivedPollingData(NodeId nodeId, DataValue value)
