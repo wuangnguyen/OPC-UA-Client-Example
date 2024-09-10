@@ -15,11 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="ClientConfig.xml" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="ApplicationConfig.xml">
+    <Content Include="App.Config.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

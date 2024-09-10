@@ -65,11 +65,19 @@ public class OpcUaSessionProvider : IAsyncDisposable
         {
             UserTokenType.Anonymous => new UserIdentity(new AnonymousIdentityToken()),
             UserTokenType.UserName => new UserIdentity(opcUaSettings.UserIdentity.Username, opcUaSettings.UserIdentity.Password),
-            UserTokenType.Certificate => new UserIdentity(await applicationInstance.ApplicationConfiguration.SecurityConfiguration.ApplicationCertificate.Find()),
-            _ => throw new ArgumentException($"{opcUaSettings.UserTokenType.ToString()} is invalid user token type")
+            _ => throw new ArgumentException($"{opcUaSettings.UserTokenType.ToString()} is not yet supported")
         };
 
-        session = await Session.Create(applicationInstance.ApplicationConfiguration, configuredEndpoint, false, opcUaSettings.ApplicationName, 60000, userIdentity, null);
+        var applicationConfiguration = applicationInstance.ApplicationConfiguration;
+
+        session = await Session.Create(
+            applicationConfiguration, 
+            configuredEndpoint, 
+            true, 
+            applicationConfiguration.ApplicationName, 
+            (uint)applicationConfiguration.ClientConfiguration.DefaultSessionTimeout, 
+            userIdentity, null
+        );
 
         return session;
     }
@@ -81,8 +89,10 @@ public class OpcUaSessionProvider : IAsyncDisposable
     /// <returns>The configured endpoint.</returns>
     private ConfiguredEndpoint GetConfiguredEndpoint(ApplicationInstance applicationInstance)
     {
+        
         string endpointUrl = opcUaSettings.ServerEndpoint;
 
+        // TODO: get EndpointDescription from the injected input
         var endpoint = CoreClientUtils.SelectEndpoint(endpointUrl, useSecurity: false);
         var configuredEndpoint = new ConfiguredEndpoint(null, endpoint, EndpointConfiguration.Create(applicationInstance.ApplicationConfiguration));
 
@@ -95,7 +105,7 @@ public class OpcUaSessionProvider : IAsyncDisposable
     /// <returns>The application instance.</returns>
     private async Task<ApplicationInstance> LoadApplicationConfigurationAsync()
     {
-        string configFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, opcUaSettings.ApplicationConfigFilePath);
+        string configFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, opcUaSettings.ApplicationConfigurationFilePath);
 
         var applicationInstance = new ApplicationInstance();
         await applicationInstance.LoadApplicationConfiguration(configFilePath, false);
@@ -115,6 +125,11 @@ public class OpcUaSessionProvider : IAsyncDisposable
     /// </summary>
     public async ValueTask DisposeAsync()
     {
+        if (session == null)
+        {
+            return;
+        }
+
         await session?.CloseAsync()!;
         session?.Dispose();
     }

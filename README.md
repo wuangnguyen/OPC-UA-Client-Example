@@ -1,7 +1,7 @@
 # Project Documentation
 
 ## Summary
-This project demonstrates how to create an OPC UA client using the OPC Foundation [.NET Standard Opc.Ua.Client library](https://www.nuget.org/packages/OPCFoundation.NetStandard.Opc.Ua.Client). It includes functionalities such as polling, subscribing to, and manually reading values from OPC UA server nodes. The provided services in this example are not limited to .NET 8 and Blazor; they are applicable to any project built with .NET Core 3.0 or later, including .NET 5 and newer versions.
+This project demonstrates how to create and use OPC UA clients on web applications using the OPC Foundation [.NET Standard Opc.Ua.Client library](https://www.nuget.org/packages/OPCFoundation.NetStandard.Opc.Ua.Client). It includes functionalities such as polling, subscribing to, and manually reading values from OPC UA server nodes. The provided services in this example are not limited to .NET 8 and Blazor; they are applicable to any project built with .NET Core 3.0 or later, including .NET 5 and newer versions.
 
 ## Main Features
 - Connect to an OPC UA server endpoint
@@ -195,3 +195,7 @@ await opcUaSubscriptionService.AddMonitoredItemAsync(monitoredItems);
 
 - Verify that the endpoint URL is correct and that the OPC UA server is reachable.
 - Check the console output for any error messages or connection issues.
+
+## TODO:
+- Support multipe session instances by using factory pattern
+- Support UserTokenType = Certificate

@@ -10,6 +10,10 @@
 			<StorePath>%CommonApplicationData%\OPC Foundation\CertificateStores\MachineDefault</StorePath>
 			<SubjectName>CN=OPCUAClient, O=CompanyName, C=US</SubjectName>
 		</ApplicationCertificate>
+		<TrustedIssuerCertificates>
+			<StoreType>Directory</StoreType>
+			<StorePath>%CommonApplicationData%\OPC Foundation\pki\issuer</StorePath>
+		</TrustedIssuerCertificates>
 		<TrustedPeerCertificates>
 			<StoreType>Directory</StoreType>
 			<StorePath>%CommonApplicationData%\OPC Foundation\CertificateStores\UA Applications</StorePath>
@@ -19,8 +23,13 @@
 			<StorePath>%CommonApplicationData%\OPC Foundation\CertificateStores\RejectedCertificates</StorePath>
 		</RejectedCertificateStore>
 		<AutoAcceptUntrustedCertificates>true</AutoAcceptUntrustedCertificates>
-		<MinimumCertificateKeySize>2048</MinimumCertificateKeySize>
 		<RejectSHA1SignedCertificates>false</RejectSHA1SignedCertificates>
+		<MinimumCertificateKeySize>2048</MinimumCertificateKeySize>
+		<UseValidatedCertificates>true</UseValidatedCertificates>
+		<TrustedUserCertificates>
+			<StoreType>Directory</StoreType>
+			<StorePath>%CommonApplicationData%\OPC Foundation\pki\trustedUser</StorePath>
+		</TrustedUserCertificates>
 	</SecurityConfiguration>
 	<TransportQuotas>
 		<OperationTimeout>15000</OperationTimeout>
@@ -33,27 +42,6 @@
 		<SecurityTokenLifetime>3600000</SecurityTokenLifetime>
 	</TransportQuotas>
 	<ServerConfiguration>
-		<BaseAddresses>
-			<String>opc.tcp://DESKTOP-PA2GH2V:49320</String>
-		</BaseAddresses>
-		<SecurityPolicies>
-			<SecurityPolicy>
-				<SecurityMode>SignAndEncrypt_3</SecurityMode>
-				<SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#None</SecurityPolicyUri>
-			</SecurityPolicy>
-		</SecurityPolicies>
-		<MaxSessionCount>100</MaxSessionCount>
-		<MaxSubscriptionCount>100</MaxSubscriptionCount>
-		<MaxPublishRequestCount>100</MaxPublishRequestCount>
-		<MaxRequestAge>60000</MaxRequestAge>
-		<MinPublishingInterval>100</MinPublishingInterval>
-		<MaxPublishingInterval>3600000</MaxPublishingInterval>
-		<PublishingResolution>50</PublishingResolution>
-		<MaxSubscriptionLifetime>3600000</MaxSubscriptionLifetime>
-		<MaxMessageQueueSize>10</MaxMessageQueueSize>
-		<MaxNotificationQueueSize>100</MaxNotificationQueueSize>
-		<MaxNotificationsPerPublish>100</MaxNotificationsPerPublish>
-		<MinSubscriptionLifetime>1000</MinSubscriptionLifetime>
 	</ServerConfiguration>
 	
 	<ClientConfiguration>

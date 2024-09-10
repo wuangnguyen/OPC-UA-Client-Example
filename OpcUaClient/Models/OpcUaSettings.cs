@@ -6,8 +6,7 @@ namespace OpcUaClient.Models
     {
         public string ServerEndpoint { get; set; } = string.Empty;
         public UserTokenType UserTokenType { get; set; } = UserTokenType.Anonymous;
-        public string ApplicationName { get; set; } = "Blazor OPC UA Client";
-        public string ApplicationConfigFilePath { get; set; } = "ApplicationConfig.xml";
+        public string ApplicationConfigurationFilePath { get; set; } = "App.Config.xml";
         public UserIdentitySettings UserIdentity { get; set; } = new UserIdentitySettings();
     }
 
@@ -15,6 +14,5 @@ namespace OpcUaClient.Models
     {
         public string Username { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
-        public string PathToCertificate { get; set; } = string.Empty;
     }
 }
