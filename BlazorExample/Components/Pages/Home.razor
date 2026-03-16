@@ -66,6 +66,8 @@
 </div>
 
 @code {
+    private const string serverId = "default";
+
     private string? pollingTag1Data = "...";
     private string? pollingTag3Data = "...";
     private string? subscriptionTag1Data = "...";
@@ -79,7 +81,7 @@
 
         NodeId[] nodeIds = new[] { new NodeId("Channel1.Device1.Tag1", 2), new NodeId("Channel1.Device2.Tag3", 2) };
 
-        await PollingService.StartPollingAsync(nodeIds, 1000);
+        await PollingService.StartPollingAsync(serverId, nodeIds, 1000);
 
         // Setup Subscription
         SubscriptionService.OnSubscriptionDataChanged += HandleSubscriptionDataChanged;
@@ -98,7 +100,7 @@
             }
         };
 
-        await SubscriptionService.AddMonitoredItemAsync(monitoredItems);
+        await SubscriptionService.AddMonitoredItemAsync(serverId, monitoredItems);
     }
 
     private void HandleReceivedPollingData(NodeId nodeId, DataValue value)
@@ -138,7 +140,7 @@
     private async Task ReadOnDemand()
     {
         var nodeId = new NodeId("Channel1.Device2.Tag3", 2);
-        var session = await PollingService.GetSessionAsync();
+        var session = await PollingService.GetSessionAsync(serverId);
         var readValue = await session.ReadValueAsync(nodeId);
 
         if (readValue != null && StatusCode.IsGood(readValue.StatusCode))

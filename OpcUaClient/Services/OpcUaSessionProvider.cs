@@ -4,6 +4,8 @@ using Opc.Ua.Configuration;
 using Opc.Ua;
 using OpcUaClient.Models;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using System.IO;
 using System.Threading;
@@ -11,18 +13,18 @@ using System.Threading;
 namespace OpcUaClient.Services;
 
 /// <summary>
-/// Provides an instance of communication session.
+/// Provides a communication session for a specified server. The session is cached for subsequent calls.
 /// </summary>
 public class OpcUaSessionProvider : IAsyncDisposable
 {
-    private readonly OpcUaSettings opcUaSettings;
-    private Session? session;
+    private readonly List<OpcUaSettings> opcUaSettings;
+    private readonly Dictionary<string, Session> sessions = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OpcUaSessionProvider"/> class.
     /// </summary>
     /// <param name="options">The options.</param>
-    public OpcUaSessionProvider(IOptions<OpcUaSettings> options)
+    public OpcUaSessionProvider(IOptions<List<OpcUaSettings>> options)
     {
         opcUaSettings = options.Value;
     }
@@ -30,21 +32,31 @@ public class OpcUaSessionProvider : IAsyncDisposable
     private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
 
     /// <summary>
-    /// Create an communication session asynchronously.
+    /// Creates a communication session for the specified server. The session is cached for subsequent calls.
     /// </summary>
+    /// <param name="serverId">The server identifier.</param>
     /// <returns>The communication session.</returns>
-    public async Task<Session> CreateSessionAsync()
+    /// <exception cref="ArgumentException">Thrown when serverId is null or empty, or when no matching server is found.</exception>
+    public async Task<Session> CreateSessionAsync(string serverId)
     {
+        if (string.IsNullOrWhiteSpace(serverId))
+        {
+            throw new ArgumentException("Server ID must be provided.", nameof(serverId));
+        }
+
         await semaphore.WaitAsync();
 
         try
         {
-            if (session != null)
+            if (sessions.TryGetValue(serverId, out var existingSession))
             {
-                return session;
+                return existingSession;
             }
 
-            return await CreateSessionInternalAsync();
+            var settings = opcUaSettings.FirstOrDefault(s => s.ServerId == serverId)
+                ?? throw new ArgumentException($"No OPC UA server found with ServerId '{serverId}'.", nameof(serverId));
+
+            return await CreateSessionInternalAsync(serverId, settings);
         }
         finally
         {
@@ -53,13 +65,15 @@ public class OpcUaSessionProvider : IAsyncDisposable
     }
 
     /// <summary>
-    /// Creates a new communication session asynchronously.
+    /// Creates a new communication session.
     /// </summary>
+    /// <param name="serverId">The server identifier.</param>
+    /// <param name="opcUaSettings">The OPC UA settings to use.</param>
     /// <returns>The created session.</returns>
-    private async Task<Session> CreateSessionInternalAsync()
+    private async Task<Session> CreateSessionInternalAsync(string serverId, OpcUaSettings opcUaSettings)
     {
-        ApplicationInstance applicationInstance = await LoadApplicationConfigurationAsync();
-        ConfiguredEndpoint configuredEndpoint = GetConfiguredEndpoint(applicationInstance);
+        ApplicationInstance applicationInstance = await LoadApplicationConfigurationAsync(opcUaSettings);
+        ConfiguredEndpoint configuredEndpoint = GetConfiguredEndpoint(applicationInstance, opcUaSettings);
 
         UserIdentity userIdentity = opcUaSettings.UserTokenType switch
         {
@@ -70,14 +84,16 @@ public class OpcUaSessionProvider : IAsyncDisposable
 
         var applicationConfiguration = applicationInstance.ApplicationConfiguration;
 
-        session = await Session.Create(
-            applicationConfiguration, 
-            configuredEndpoint, 
-            true, 
-            applicationConfiguration.ApplicationName, 
-            (uint)applicationConfiguration.ClientConfiguration.DefaultSessionTimeout, 
+        var session = await Session.Create(
+            applicationConfiguration,
+            configuredEndpoint,
+            true,
+            applicationConfiguration.ApplicationName,
+            (uint)applicationConfiguration.ClientConfiguration.DefaultSessionTimeout,
             userIdentity, null
         );
+
+        sessions[serverId] = session;
 
         return session;
     }
@@ -86,10 +102,10 @@ public class OpcUaSessionProvider : IAsyncDisposable
     /// Gets the configured endpoint.
     /// </summary>
     /// <param name="applicationInstance">The application instance.</param>
+    /// <param name="opcUaSettings">The OPC UA settings.</param>
     /// <returns>The configured endpoint.</returns>
-    private ConfiguredEndpoint GetConfiguredEndpoint(ApplicationInstance applicationInstance)
+    private ConfiguredEndpoint GetConfiguredEndpoint(ApplicationInstance applicationInstance, OpcUaSettings opcUaSettings)
     {
-        
         string endpointUrl = opcUaSettings.ServerEndpoint;
 
         // TODO: get EndpointDescription from the injected input
@@ -102,8 +118,9 @@ public class OpcUaSessionProvider : IAsyncDisposable
     /// <summary>
     /// Loads the application configuration asynchronously.
     /// </summary>
+    /// <param name="opcUaSettings">The OPC UA settings.</param>
     /// <returns>The application instance.</returns>
-    private async Task<ApplicationInstance> LoadApplicationConfigurationAsync()
+    private async Task<ApplicationInstance> LoadApplicationConfigurationAsync(OpcUaSettings opcUaSettings)
     {
         string configFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, opcUaSettings.ApplicationConfigurationFilePath);
 
@@ -125,12 +142,12 @@ public class OpcUaSessionProvider : IAsyncDisposable
     /// </summary>
     public async ValueTask DisposeAsync()
     {
-        if (session == null)
+        foreach (var session in sessions.Values)
         {
-            return;
+            await session.CloseAsync();
+            session.Dispose();
         }
 
-        await session?.CloseAsync()!;
-        session?.Dispose();
+        sessions.Clear();
     }
 }

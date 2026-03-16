@@ -4,6 +4,7 @@ namespace OpcUaClient.Models
 {
     public class OpcUaSettings
     {
+        public string ServerId { get; set; } = string.Empty;
         public string ServerEndpoint { get; set; } = string.Empty;
         public UserTokenType UserTokenType { get; set; } = UserTokenType.Anonymous;
         public string ApplicationConfigurationFilePath { get; set; } = "App.Config.xml";

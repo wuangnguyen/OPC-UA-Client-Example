@@ -25,7 +25,7 @@ internal class Program
         builder.Services.AddRazorComponents()
             .AddInteractiveServerComponents();
 
-        builder.Services.Configure<OpcUaSettings>(builder.Configuration.GetSection("OpcUaSettings"));
+        builder.Services.Configure<List<OpcUaSettings>>(builder.Configuration.GetSection("OpcUaSettings"));
 
         builder.Services.AddScoped<OpcUaSessionProvider>();
 

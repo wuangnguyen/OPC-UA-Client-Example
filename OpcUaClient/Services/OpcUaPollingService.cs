@@ -13,9 +13,9 @@ namespace OpcUaClient.Services;
 public class OpcUaPollingService : IAsyncDisposable
 {
     private readonly ILogger<OpcUaPollingService> logger;
-    private readonly Lazy<Task<Session>> lazySession;
+    private readonly OpcUaSessionProvider sessionProvider;
     private Timer? pollingTimer;
-    private Session session;
+    private Session? session;
     private NodeId[]? nodeIds;
 
     /// <summary>
@@ -31,27 +31,29 @@ public class OpcUaPollingService : IAsyncDisposable
     public OpcUaPollingService(OpcUaSessionProvider sessionProvider, ILoggerFactory loggerFactory)
     {
         logger = loggerFactory.CreateLogger<OpcUaPollingService>();
-        lazySession = new Lazy<Task<Session>>(sessionProvider.CreateSessionAsync());
+        this.sessionProvider = sessionProvider;
     }
 
     /// <summary>
     /// Starts polling a single OPC UA node.
     /// </summary>
+    /// <param name="serverId">The server identifier.</param>
     /// <param name="nodeId">The node ID to poll.</param>
     /// <param name="interval">The polling interval in milliseconds.</param>
-    public async Task StartPollingAsync(NodeId nodeId, int interval = 1000)
+    public async Task StartPollingAsync(string serverId, NodeId nodeId, int interval = 1000)
     {
-        await StartPollingAsync([nodeId], interval);
+        await StartPollingAsync(serverId, [nodeId], interval);
     }
 
     /// <summary>
     /// Starts polling multiple OPC UA nodes.
     /// </summary>
+    /// <param name="serverId">The server identifier.</param>
     /// <param name="nodeIds">The node IDs to poll.</param>
     /// <param name="interval">The polling interval in milliseconds.</param>
-    public async Task StartPollingAsync(NodeId[] nodeIds, int interval = 1000)
+    public async Task StartPollingAsync(string serverId, NodeId[] nodeIds, int interval = 1000)
     {
-        session = await lazySession.Value;
+        session = await sessionProvider.CreateSessionAsync(serverId);
 
         this.nodeIds = nodeIds;
 
@@ -63,7 +65,7 @@ public class OpcUaPollingService : IAsyncDisposable
     /// </summary>
     private async Task ReadValuesAsync()
     {
-        if (nodeIds == null || nodeIds.Length == 0)
+        if (nodeIds == null || nodeIds.Length == 0 || session == null)
         {
             return;
         }
@@ -90,9 +92,10 @@ public class OpcUaPollingService : IAsyncDisposable
     /// <summary>
     /// Gets the session for reading values on demand.
     /// </summary>
-    public async Task<Session> GetSessionAsync()
+    /// <param name="serverId">The server identifier.</param>
+    public async Task<Session> GetSessionAsync(string serverId)
     {
-        return await lazySession.Value;
+        return await sessionProvider.CreateSessionAsync(serverId);
     }
 
     /// <summary>

@@ -13,9 +13,10 @@ namespace OpcUaClient.Services;
 /// </summary>
 public class OpcUaSubscriptionService : IAsyncDisposable
 {
-    private readonly Lazy<Task<Session>> lazySession;
+    private readonly OpcUaSessionProvider sessionProvider;
     private readonly ILogger<OpcUaSubscriptionService> logger;
     private Subscription? subscription;
+    private string? activeServerId;
 
     /// <summary>
     /// Event triggered when data changes for a monitored item.
@@ -30,16 +31,17 @@ public class OpcUaSubscriptionService : IAsyncDisposable
     public OpcUaSubscriptionService(OpcUaSessionProvider sessionProvider, ILoggerFactory loggerFactory)
     {
         logger = loggerFactory.CreateLogger<OpcUaSubscriptionService>();
-        lazySession = new Lazy<Task<Session>>(sessionProvider.CreateSessionAsync);
+        this.sessionProvider = sessionProvider;
     }
 
     /// <summary>
     /// Adds a monitored item to the subscription.
     /// </summary>
+    /// <param name="serverId">The server identifier.</param>
     /// <param name="monitoredItem">The monitored item to add.</param>
-    public async Task AddMonitoredItemAsync(MonitoredItem monitoredItem)
+    public async Task AddMonitoredItemAsync(string serverId, MonitoredItem monitoredItem)
     {
-        await EnsureSubscriptionAsync();
+        await EnsureSubscriptionAsync(serverId);
 
         AddMonitoredItemInternal(monitoredItem);
 
@@ -49,10 +51,11 @@ public class OpcUaSubscriptionService : IAsyncDisposable
     /// <summary>
     /// Adds multiple monitored items to the subscription.
     /// </summary>
+    /// <param name="serverId">The server identifier.</param>
     /// <param name="monitoredItems">The monitored items to add.</param>
-    public async Task AddMonitoredItemAsync(MonitoredItem[] monitoredItems)
+    public async Task AddMonitoredItemAsync(string serverId, MonitoredItem[] monitoredItems)
     {
-        await EnsureSubscriptionAsync();
+        await EnsureSubscriptionAsync(serverId);
 
         foreach (var monitoredItem in monitoredItems)
         {
@@ -65,9 +68,11 @@ public class OpcUaSubscriptionService : IAsyncDisposable
     /// <summary>
     /// Ensures that a subscription is created.
     /// </summary>
-    private async Task EnsureSubscriptionAsync()
+    /// <param name="serverId">The server identifier.</param>
+    private async Task EnsureSubscriptionAsync(string serverId)
     {
-        var session = await lazySession.Value;
+        activeServerId = serverId;
+        var session = await sessionProvider.CreateSessionAsync(serverId);
 
         if (subscription == null)
         {
